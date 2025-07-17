@@ -303,8 +303,8 @@ async function searchWord() {
     <h3>Definitions <small class="source">(Merriam-Webster)</small></h3>${defsHTML}<span style="display:block; height:0.5em;"></span>
     <h3>Examples<small class="source">(Merriam-Webster)</small></h3>${examplesHTML}<span style="display:block; height:0.5em;"></span>
     <h3>Etymology <small class="source">(Etymonline)</small></h3><div>${finalEty}</div><span style="display:block; height:0.5em;"></span>
-    <h3>Images <small class="source">${mwImg ? '(Merriam-Webster)' : images.length ? '(Pexels/Unsplash)' : '(No source)'}</small></h3><div>${imgHTML}</div><span style="display:block; height:0.5em;"></span>
     <h3>Synonyms <small class="source">(Merriam-Webster Thesaurus)</small></h3><div>${synHTML}</div><span style="display:block; height:0.5em;"></span>
+    <h3>Images <small class="source">${mwImg ? '(Merriam-Webster)' : images.length ? '(Pexels/Unsplash)' : '(No source)'}</small></h3><div>${imgHTML}</div><span style="display:block; height:0.5em;"></span>
   `;
 
   // Click behavior for suggestions
