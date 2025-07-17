@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#121212" />
+  <title>Mini Dictionary</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>
+      <span class="clickable-word" data-word="Mini">Mini</span>
+      <span class="clickable-word" data-word="Dictionary">Dictionary</span>
+    </h1>
+    <div class="search-bar">
+      <input type="text" id="searchWord" placeholder="Enter a word..." autocomplete="off" />
+      <button onclick="searchWord()">Search</button>
+      <button id="darkModeToggle" title="Toggle dark mode">🌓</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="results"></div>
+  </main>
+
+  <footer>
+    <p>Sources: Merriam-Webster, Etymonline, Pexels, Unsplash</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
