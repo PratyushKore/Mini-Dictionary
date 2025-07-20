@@ -2,7 +2,12 @@ const dictionaryKey = 'eb60df6d-14a9-4f42-a70b-4eb00b64377f';
 const thesaurusKey = '841b0716-4e7b-4f83-b34f-14f33c8eeadb';
 const pexelsKey = 'nUxSXnRtn5nias8DRSkS4ivD8N7nwI425aAwC60a9GpdfHz3NwNJJXgp'; // get one for https://www.pexels.com/api/
 const unsplashKey = 'oFJ4cp-CvNMvDVkONC7dIav-kbixg3N_6K0hszVzY04'; // https://unsplash.com/developers
-const corsProxy = 'https://corsproxy.io/?';
+
+const proxies = [
+  'https://corsproxy.io/?',
+  'https://api.allorigins.win/raw?url=',
+  'https://cors.bridged.cc/', // less known, might work
+];
 
 // UTIL sanitation
 function sanitizeHTML(str) {
@@ -163,35 +168,31 @@ function extractMWImage(defs) {
 
 // Fetch etymology from etymonline via CORS proxy and parse HTML with selector + cleanup
 async function fetchEtymologyWithProxy(word) {
-  try {
-    const etyUrl = `https://www.etymonline.com/word/${encodeURIComponent(word)}`;
-    const res = await fetch(corsProxy + etyUrl);
-    if (!res.ok) throw new Error('Failed to fetch etymonline page');
-    const htmlText = await res.text();
+  const url = `https://www.etymonline.com/word/${encodeURIComponent(word)}`;
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlText, 'text/html');
+  for (const proxy of proxies) {
+    try {
+      const res = await fetch(proxy + url);
+      if (!res.ok) throw new Error('Failed fetch');
 
-    const selector = 'body > div:nth-child(2) > div > main > section > div.w-full.lg\\:w-\\[728px\\].items-start > div.mt-4.space-y-12.mobile\\:space-y-8.w-full > div:nth-child(1) > div.bg-white.mobile\\:bg-transparent.dark\\:bg-secondary.dark\\:mobile\\:bg-transparent.rounded-lg.lg\\:shadow-sm.pl-6.pr-6.pt-2.pb-6.mobile\\:p-0 > div > div';
+      const htmlText = await res.text();
+      if (htmlText.includes('Want to remove ads?')) throw new Error('Blocked by ads');
 
-    const etyEl = doc.querySelector(selector);
-    if (!etyEl) throw new Error('Etymology element not found');
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlText, 'text/html');
 
-    let rawHTML = etyEl.innerHTML;
+      const paragraphs = doc.querySelectorAll('p');
+      if (paragraphs.length < 2) throw new Error('Second <p> tag not found');
 
-    rawHTML = rawHTML
-      .replace(/\{it\}([\s\S]+?)\{\/it\}/g, '<em>$1</em>')
-      .replace(/\{sup\}([\s\S]+?)\{\/sup\}/g, '<sup>$1</sup>')
-      .replace(/\{dx_ety\}([\s\S]+?)\{\/dx_ety\}/g, '$1')
-      .replace(/\{dxt\|([^:]+):\d+\|\|\}/g, '$1')
-      .replace(/\{et_link\|([^|]+)\|([^}]+)\}/g, '$1')
-      .replace(/\{[^}]+\}/g, '');
-
-    return rawHTML.trim();
-  } catch (e) {
-    console.warn('Etymology fetch error:', e);
-    return null;
+      return paragraphs[1].innerHTML.trim();
+    } catch (e) {
+      console.warn(`Proxy ${proxy} failed:`, e);
+      continue;  // Try next proxy
+    }
   }
+
+  console.warn('All proxies failed.');
+  return null;
 }
 
 // Format MW fallback etymology
@@ -297,12 +298,16 @@ async function searchWord() {
     examplesHTML = `<ul>${examples.map(ex => `<li>${sanitizeHTML(ex)}</li>`).join('')}</ul>`;
   }
 
+  // Determine etymology source label
+  const etySourceLabel = finalEty && finalEty === etyHtml ? '(Etymonline)' : '(Merriam-Webster)';
+
+  // Insert with dynamic source label
   resDiv.innerHTML = `
     <h2>${sanitizeHTML(word)}</h2><span style="display:block; height:0.5em;"></span>
     ${sugHTML}
     <h3>Definitions <small class="source">(Merriam-Webster)</small></h3>${defsHTML}<span style="display:block; height:0.5em;"></span>
     <h3>Examples<small class="source">(Merriam-Webster)</small></h3>${examplesHTML}<span style="display:block; height:0.5em;"></span>
-    <h3>Etymology <small class="source">(Etymonline)</small></h3><div>${finalEty}</div><span style="display:block; height:0.5em;"></span>
+    <h3>Etymology <small class="source">${etySourceLabel}</small></h3><div>${finalEty}</div><span style="display:block; height:0.5em;"></span>
     <h3>Synonyms <small class="source">(Merriam-Webster Thesaurus)</small></h3><div>${synHTML}</div><span style="display:block; height:0.5em;"></span>
     <h3>Images <small class="source">${mwImg ? '(Merriam-Webster)' : images.length ? '(Pexels/Unsplash)' : '(No source)'}</small></h3><div>${imgHTML}</div><span style="display:block; height:0.5em;"></span>
   `;
@@ -314,6 +319,20 @@ async function searchWord() {
       searchWord();
     }));
   }
+
+  // Click behavior for suggestions
+  if (suggestions) {
+    resDiv.querySelectorAll('.suggest').forEach(el => el.addEventListener('click', () => {
+      document.getElementById('searchWord').value = el.textContent;
+      searchWord();
+    }));
+  }
+
+  // Click behavior for synonyms
+  resDiv.querySelectorAll('.tag').forEach(el => el.addEventListener('click', () => {
+    document.getElementById('searchWord').value = el.textContent;
+    searchWord();
+  }));
 
   // Make all words clickable now that content is inserted
   makeWordsClickable(resDiv);
